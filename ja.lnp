@@ -1,0 +1,8 @@
+"display.obj",
+"gpio.obj",
+"main.obj",
+"protocol.obj",
+"serial.obj",
+"timers.obj" 
+TO "ja" 
+RAMSIZE(256) 

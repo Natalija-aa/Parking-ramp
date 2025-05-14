@@ -1,0 +1,113 @@
+C51 COMPILER V8.16   TIMERS                                                                02/11/2025 00:57:52 PAGE 1   
+
+
+C51 COMPILER V8.16, COMPILATION OF MODULE TIMERS
+OBJECT MODULE PLACED IN timers.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE timers.c LARGE OPTIMIZE(0,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "timers.h"
+   2          #include "types.h"
+   3          
+   4          uint16_t tim1_cnt = 0;
+   5          uint16_t tim1_cnt_max;
+   6          
+   7          uint8_t tim1_int = 0;
+   8          uint8_t tim1_int_debounce = 0;
+   9          
+  10          uint8_t TH1_val = 0;
+  11          uint8_t TL1_val = 0;
+  12          
+  13          void initTIM1(uint8_t mode, uint8_t TH1_reg, uint8_t TL1_reg, uint16_t max)
+  14          {
+  15   1              setTIM1_reg(TH1_reg, TL1_reg, max);
+  16   1      
+  17   1              TMOD |= mode;
+  18   1              TH1 = TH1_reg;
+  19   1              TL1 = TL1_reg;
+  20   1              ET1 = 1;
+  21   1      }
+  22          
+  23          void setTIM1_reg(uint8_t TH1_reg, uint8_t TL1_reg, uint16_t max)
+  24          {
+  25   1              TH1_val = TH1_reg;
+  26   1              TL1_val = TL1_reg;
+  27   1              tim1_cnt_max = max;
+  28   1      
+  29   1              if(tim1_cnt_max == 0x64 && TH1_reg == 0x4C && TL1_reg == 0xA6){
+  30   2                      flag = 0x01;
+  31   2              }
+  32   1      }
+  33          
+  34          void resetTIM1(uint8_t TH1_reg, uint8_t TL1_reg, uint16_t max)
+  35          {
+  36   1              tim1_cnt_max = max;
+  37   1              TH1 = TH1_reg;
+  38   1              TL1 = TL1_reg;
+  39   1              /*
+  40   1              if(tim1_cnt_max == 0x64 && TH1_reg == 0x4C && TL1_reg == 0xA6){
+  41   1                      flag = 0x01;
+  42   1              }
+  43   1              */
+  44   1              tim1_cnt = 0;
+  45   1      }
+  46          
+  47          void startTIM1(void)
+  48          {
+  49   1              TR1 = 1;
+  50   1      }
+  51          
+  52          void stopTIM1(void)
+  53          {
+  54   1              TR1 = 0;
+  55   1      }
+C51 COMPILER V8.16   TIMERS                                                                02/11/2025 00:57:52 PAGE 2   
+
+  56          
+  57          void enableGlobalIT(uint8_t on)
+  58          {
+  59   1              EA = (on & 0x01);
+  60   1      }
+  61          
+  62          void TIM1_IT(void) interrupt 3
+  63          {
+  64   1              stopTIM1();
+  65   1              TH1 = TH1_val;
+  66   1              TL1 = TL1_val;
+  67   1              
+  68   1              ++tim1_cnt;
+  69   1      
+  70   1              if(flag == 0x01){
+  71   2                      if(tim1_cnt == tim1_cnt_max){
+  72   3                              tim1_cnt = 0;
+  73   3                              tim1_int = 1;
+  74   3                              final_int = 1;
+  75   3                      }       
+  76   2              }else{
+  77   2                      if(tim1_cnt == tim1_cnt_max){
+  78   3                              tim1_cnt = 0;
+  79   3                              tim1_int = 1;
+  80   3                              final_int = 0;
+  81   3              }
+  82   2              }
+  83   1      
+  84   1              // svaki prekid
+  85   1              tim1_int_debounce = 1;
+  86   1      
+  87   1              startTIM1();
+  88   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    406    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     22    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

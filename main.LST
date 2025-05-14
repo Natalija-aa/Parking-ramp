@@ -1,0 +1,298 @@
+C51 COMPILER V8.16   MAIN                                                                  02/11/2025 00:57:51 PAGE 1   
+
+
+C51 COMPILER V8.16, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN main.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE main.c LARGE OPTIMIZE(0,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "serial.h"
+   2          #include "gpio.h"
+   3          #include "timers.h"
+   4          #include "display.h"
+   5          
+   6          //globalne promjenljive
+   7          //simulacija senzora
+   8          sPin_t pinP0_6; //down
+   9          sPin_t pinP0_7; //up
+  10          
+  11          //debounce
+  12          uint8_t debounce6 = 0;
+  13          uint8_t debounce6_cnt = 0;
+  14          uint8_t debounce7 = 0;
+  15          uint8_t debounce7_cnt = 0;
+  16          
+  17          //prekidaci podignuto spusteno
+  18          uint8_t tmp_up = 0x00;
+  19          uint8_t tmp_down = 0x00;
+  20          uint8_t up;                             
+  21          uint8_t down = 0xFF;            
+  22          
+  23          uint8_t final_int = 0x00;
+  24          uint8_t tmp = 0x00;     
+  25          
+  26          extern uint8_t car_cnt = 0x00;          //brojac auta na parkingu
+  27          
+  28          uint8_t flag = 0x00;
+  29          uint8_t strBr[3];               //dva karaktera plus terminator
+  30          uint8_t br = 0x00;
+  31          uint8_t encodedMsg[3];
+  32          uint8_t str[3];
+  33          
+  34          
+  35          void Podigni(void){
+  36   1              P2 = 0x80;
+  37   1              down = 0x00;
+  38   1      }
+  39          
+  40          void Spusti(void){
+  41   1              P2 = 0x01;
+  42   1              up = 0x00;
+  43   1      }
+  44          
+  45          void Podignuta(void){
+  46   1              P2 = 0xFF;
+  47   1      }
+  48          
+  49          void Spustena(void){
+  50   1              P2 = 0x00;
+  51   1      }
+  52          
+  53          //hex u string
+  54          void HexToStr(uint8_t hex, char* str) {
+  55   1              uint8_t index = 0;
+C51 COMPILER V8.16   MAIN                                                                  02/11/2025 00:57:51 PAGE 2   
+
+  56   1              uint8_t tmpStr[3];
+  57   1              uint8_t ostatak;
+  58   1              uint8_t duzina;
+  59   1              uint8_t i = 0;
+  60   1      
+  61   1              do{
+  62   2                      ostatak = hex % 10;
+  63   2                      
+  64   2                      if(ostatak < 10){
+  65   3                              tmpStr[index++] = '0' + ostatak;
+  66   3                      }       
+  67   2      
+  68   2                      hex/=10;
+  69   2      
+  70   2              }while(hex != 0);
+  71   1      
+  72   1              tmpStr[index] = '\0';
+  73   1              
+  74   1              duzina = index; 
+  75   1      
+  76   1              for(i = 0; i < duzina; i++){
+  77   2                      str[i] = tmpStr[duzina - i - 1];
+  78   2              }
+  79   1      
+  80   1              str[duzina] = '\0';
+  81   1      }
+  82          
+  83          //UP i DOWN su u stvarnoj situaciji senzori koji reaguju na kontakt 
+  84          //tako da je 'nemoguce' da se oba aktiviraju istovremeno
+  85          
+  86          void main(void){
+  87   1      
+  88   1              initGPIO();
+  89   1              initPin(&pinP0_6, P0_6);
+  90   1              initPin(&pinP0_7, P0_7);
+  91   1              if(flag != 0x01){
+  92   2              initTIM1(0x10, 0xEE, 0x00, 1);
+  93   2              }
+  94   1              enableGlobalIT(1);
+  95   1      
+  96   1              initUART(1, 0, 253);
+  97   1              enableUART_IT(1);
+  98   1              enableGlobal_IT(1);
+  99   1      
+ 100   1              initDisplay();
+ 101   1              clearDisplay();
+ 102   1      
+ 103   1              startTIM1();
+ 104   1      
+ 105   1      //      encode(&car_cnt, 1);
+ 106   1              writeLine("SLOBODAN ULAZ");
+ 107   1              newLine();
+ 108   1      
+ 109   1      //PROBLEM KADA POZOVEM ENCODE U WHILE ISPISUJE SE SAMO PRVA CIFRA A DOBRO SE ENCODUJE PORUKA
+ 110   1              while(1){
+ 111   2      
+ 112   2                      //Simulacija senzora up i down kada dodje do krajnjih pozicija
+ 113   2                      //prekidac te koristimo debounce
+ 114   2      
+ 115   2                      updateState(&pinP0_6, P0_6);
+ 116   2      
+ 117   2                      if(risingEdge(&pinP0_6) && !debounce6){
+C51 COMPILER V8.16   MAIN                                                                  02/11/2025 00:57:51 PAGE 3   
+
+ 118   3                              debounce6 = 1;
+ 119   3                              tmp_down = ~tmp_down;
+ 120   3                      }
+ 121   2      
+ 122   2                      if(tim1_int_debounce && debounce6){
+ 123   3                              tim1_int_debounce = 0;
+ 124   3      
+ 125   3                              if(pinP0_6.last_state == pinP0_6.state){
+ 126   4                                      debounce6_cnt++;
+ 127   4                              }else{
+ 128   4                                      debounce6_cnt = 0;
+ 129   4                              }
+ 130   3      
+ 131   3                              if(debounce6_cnt > 5 - 1){
+ 132   4                                      debounce6 = 0;
+ 133   4                                      debounce6_cnt = 0;
+ 134   4                                      down = tmp_down; 
+ 135   4                                      tmp_down = ~tmp_down;  //jer ne ide upali ugasi vec samo upali
+ 136   4      
+ 137   4                                      resetTIM1(0xEE, 0x00, 2);
+ 138   4                              }
+ 139   3                       }
+ 140   2                      
+ 141   2                      updateLastState(&pinP0_6);
+ 142   2      
+ 143   2      
+ 144   2                      updateState(&pinP0_7, P0_7);
+ 145   2      
+ 146   2                      if(risingEdge(&pinP0_7) && !debounce7){
+ 147   3                              debounce7 = 1;
+ 148   3                              tmp_up = ~tmp_up;
+ 149   3                      }
+ 150   2      
+ 151   2                      if(tim1_int_debounce && debounce7){
+ 152   3                              tim1_int_debounce = 0;
+ 153   3      
+ 154   3                              if(pinP0_7.last_state == pinP0_7.state){
+ 155   4                                      debounce7_cnt++;
+ 156   4                              }else{
+ 157   4                                      debounce7_cnt = 0;
+ 158   4                              }
+ 159   3      
+ 160   3                              if(debounce7_cnt > 5 - 1){
+ 161   4                                      debounce7 = 0;
+ 162   4                                      debounce7_cnt = 0;
+ 163   4                                      up = tmp_up; 
+ 164   4                                      tmp_up = ~tmp_up;       //jer ne ide upali ugasi vec samo upali
+ 165   4      
+ 166   4                                      resetTIM1(0xEE, 0x00, 2);
+ 167   4                              }
+ 168   3                       }
+ 169   2                      
+ 170   2                      updateLastState(&pinP0_7);
+ 171   2      
+ 172   2      
+ 173   2                      if(tim1_int){
+ 174   3      
+ 175   3                              //ZA IN
+ 176   3                              
+ 177   3                              //neko je na ulazu i rampa je spustena, ima mjesta na parkingu za jos auta
+ 178   3                              if(P0_0 == 0 && down == 0xFF && up == 0x00 && car_cnt < 0x0F){  
+ 179   4                                      Podigni();
+C51 COMPILER V8.16   MAIN                                                                  02/11/2025 00:57:51 PAGE 4   
+
+ 180   4                              //neko je na ulazu, rampa je u procesu dizanja(P2) i pritisnut je taster up, ima mjesta na parkingu za 
+             -jos auta
+ 181   4                              }else if(P0_0 == 0 && P2 == 0x80 && down == 0x00 && up == 0xFF && car_cnt < 0x0F){      
+ 182   4                                      Podignuta();
+ 183   4                                      tmp = 0x01;                                             //za ulaz
+ 184   4                                      initTIM1(0x10, 0x4C, 0xA6, 100); //5s
+ 185   4                              //proslo je 5s u podigntom polozaju, up je aktiviran, ima mjesta na parkingu
+ 186   4                              }else if(P2 == 0xFF && up ==0xFF && down == 0x00 && flag == 0x01 && final_int == 0x01 && car_cnt < 0x0F
+             - && tmp == 0x01){
+ 187   4                                      if(P0_0 == 1){          //ako je uslo auto povecaj broj auta na rarkingu
+ 188   5                                              car_cnt++;
+ 189   5                                              Spusti();
+ 190   5                                      }else{
+ 191   5                                              Spusti();
+ 192   5                                      }
+ 193   4      
+ 194   4                                      flag = 0x00;      //za 5 s vrati na 0
+ 195   4                              //rampa se spusta P2 = 0x01, pritisnut je prekidac down i zadovoljen je uslov za broj auta
+ 196   4                              }else if(P2 == 0x01 && up == 0x00 && down == 0xFF && (car_cnt == 0x0F || car_cnt < 0x0F)){               
+ 197   4                                 Spustena();
+ 198   4                                // encode(&car_cnt, 1);       //ovo ne ispisuje citavu poruku
+ 199   4                                              //ISPISI PORUUKE o zauzetosti
+ 200   4                                              if(car_cnt == 0x0F){
+ 201   5                                                      br = 15 - car_cnt;
+ 202   5      
+ 203   5                                                      clearDisplay();
+ 204   5                                                      HexToStr(br, str);
+ 205   5                                                      writeLine(str);
+ 206   5                                                      newLine();
+ 207   5                                              }else{
+ 208   5                                                      encode(&car_cnt, 1);    //samo prvi put se ispise a kasnije samo po djelic poruke a ne cijela
+ 209   5                                                      
+ 210   5                                                      br = 15 - car_cnt;
+ 211   5                                                              
+ 212   5                                                      clearDisplay();
+ 213   5                                                      HexToStr(br, str);
+ 214   5                                                      writeLine(str);
+ 215   5                                                      newLine();
+ 216   5                                              }
+ 217   4                      
+ 218   4                              }
+ 219   3      
+ 220   3                              
+ 221   3                              //ZA OUT
+ 222   3                              //neko je na izlazu i rampa je spustena, ima auta na parkingu
+ 223   3                              if(P0_1 == 0 && down == 0xFF && up == 0x00 && car_cnt > 0x00){  
+ 224   4                                      Podigni();
+ 225   4                              //neko je na izlazu, rampa se podize i pritisnut je aster up, ima auta na parkingu
+ 226   4                              }else if(P0_1 == 0 && P2 == 0x80 && down == 0x00 && up == 0xFF && car_cnt > 0x00){      
+ 227   4                                      Podignuta();
+ 228   4                                      tmp = 0x02;
+ 229   4                                      initTIM1(0x10, 0x4C, 0xA6, 100);   //5s
+ 230   4                              //proslo je 5s u podigntom polozaju, ima auta na parkingu
+ 231   4                              }else if(P2 == 0xFF && up ==0xFF && down == 0x00 && final_int == 0x01 && car_cnt > 0x00 && tmp == 0x02)
+             -{        
+ 232   4                                      if(P0_1 == 1){          //ato je auto izaslo smanji broj auta
+ 233   5                                              car_cnt--;
+ 234   5                                              Spusti();
+ 235   5                                      }else{
+ 236   5                                              Spusti();
+ 237   5                                      }
+ 238   4                                      flag = 0x00;
+C51 COMPILER V8.16   MAIN                                                                  02/11/2025 00:57:51 PAGE 5   
+
+ 239   4                              //rampa se spustala i dosla je do kraja(pritisnuto je down)
+ 240   4                              }else if(P2 == 0x01 && up == 0x00 && down == 0xFF && (car_cnt == 0x00 || car_cnt > 0x00)){      
+ 241   4                                      Spustena();
+ 242   4                                      encode(&car_cnt, 1);
+ 243   4      
+ 244   4                                      br = 15 - car_cnt;      //broj slobodnih mjesta na parkingu
+ 245   4                                      //encode(&br, 1);
+ 246   4      
+ 247   4                                      //ISPIS PORUKA
+ 248   4                                      clearDisplay();
+ 249   4                                      HexToStr(br, str);
+ 250   4                                      writeLine(str);
+ 251   4                                      newLine();
+ 252   4      
+ 253   4                              }
+ 254   3      
+ 255   3                              if(car_cnt == 0x0F){
+ 256   4                                      clearDisplay();
+ 257   4                                      writeLine(15);
+ 258   4                                      newLine();
+ 259   4                              }
+ 260   3                      }
+ 261   2      
+ 262   2              }
+ 263   1      
+ 264   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =   1392    ----
+   CONSTANT SIZE    =     14    ----
+   XDATA SIZE       =     37    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

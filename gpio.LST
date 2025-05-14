@@ -1,0 +1,61 @@
+C51 COMPILER V8.16   GPIO                                                                  02/11/2025 00:57:51 PAGE 1   
+
+
+C51 COMPILER V8.16, COMPILATION OF MODULE GPIO
+OBJECT MODULE PLACED IN gpio.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE gpio.c LARGE OPTIMIZE(0,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "gpio.h"
+   2          
+   3          void initGPIO(void)
+   4          {
+   5   1              P0 = 0xFF;
+   6   1              P2 = 0x00;
+   7   1      }
+   8          
+   9          void initPin(sPin_t* pin, uint8_t value)
+  10          {
+  11   1              pin->state = value;
+  12   1              pin->last_state = value;
+  13   1      }
+  14          
+  15          void updateLastState(sPin_t* pin)
+  16          {
+  17   1              pin->last_state = pin->state;
+  18   1      }
+  19          
+  20          void updateState(sPin_t* pin, uint8_t value)
+  21          {
+  22   1              pin->state = value;
+  23   1      }
+  24          
+  25          
+  26          // return 1 on rising edge
+  27          uint8_t risingEdge(sPin_t* pin)
+  28          {
+  29   1              return pin->state == 1 && pin->last_state == 0;
+  30   1      }
+  31          /*
+  32          // return 1 on falling edge
+  33          uint8_t fallingEdge(sPin_t* pin)
+  34          {
+  35                  return pin->state == 0 && pin->last_state == 1;
+  36          }
+  37          */
+  38          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    216    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     14    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

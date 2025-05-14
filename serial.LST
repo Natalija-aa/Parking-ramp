@@ -1,0 +1,102 @@
+C51 COMPILER V8.16   SERIAL                                                                02/11/2025 00:57:52 PAGE 1   
+
+
+C51 COMPILER V8.16, COMPILATION OF MODULE SERIAL
+OBJECT MODULE PLACED IN serial.OBJ
+COMPILER INVOKED BY: C:\Keil\C51\BIN\C51.EXE serial.c LARGE OPTIMIZE(0,SPEED) BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include "serial.h"
+   2          
+   3          uint8_t buffer[BUFF_SIZE];
+   4          sBuffer_t r_buff = {buffer, 0};
+   5          sBuffer_t t_buff;
+   6          uint8_t receive;
+   7          uint8_t duz = 0;
+   8          uint8_t kraj = 0;
+   9          
+  10          void initUART(uint8_t smod1, uint8_t spd, uint8_t baud)
+  11          {
+  12   1              // Iskljucivanje X2 moda 
+  13   1              CKCON0 &= ~(0x01);
+  14   1      
+  15   1              // Konfiguracija baudrate-a i dozvola konfiguracije modova u SCON
+  16   1              PCON &= ~(0xC0);
+  17   1              PCON |= ((smod1 & 0x01) << 7);
+  18   1      
+  19   1              // Podesavanje 1. moda rada - 8-bitni UART
+  20   1              SCON &= ~(0x30);
+  21   1              SCON |= (0x01 << 6);
+  22   1      
+  23   1              // Dozvola UART primanja
+  24   1              SCON |= (0x01 << 4);
+  25   1      
+  26   1              // Podesavanje baudrate-a
+  27   1              BDRCON |= ((spd & 0x01) << 1 | 0x01 << 2 | 0x01 << 3 | 0x01 << 4);
+  28   1              BRL = baud;
+  29   1      }
+  30          
+  31          void enableUART_IT(uint8_t enable)
+  32          {
+  33   1              ES = (enable & 0x01);
+  34   1      }
+  35          
+  36          void enableGlobal_IT(uint8_t enable)
+  37          {
+  38   1              EA = (enable & 0x01);
+  39   1      }
+  40          
+  41          void UART_IT(void) interrupt 4
+  42          {       
+  43   1              if(TI){
+  44   2                      TI = 0;
+  45   2      
+  46   2                      // slanje bajt po bajt
+  47   2                      ++t_buff.buff;
+  48   2                      ++duz;
+  49   2                      if(*t_buff.buff != 0x00 && !kraj){
+  50   3                              SBUF = *t_buff.buff;            
+  51   3                      }else if(!kraj && *t_buff.buff == 0x00){
+  52   3                              SBUF = *t_buff.buff;
+  53   3                              kraj= 1;
+  54   3                      }
+  55   2              } 
+C51 COMPILER V8.16   SERIAL                                                                02/11/2025 00:57:52 PAGE 2   
+
+  56   1              
+  57   1              if (RI){
+  58   2                      RI = 0;
+  59   2      
+  60   2                      // prijem bajt po bajt
+  61   2                      receive = SBUF;
+  62   2              //      send(&receive);
+  63   2      
+  64   2                      // upis u buffer i update indeksa buffera
+  65   2                      r_buff.buff[r_buff.index] = receive;
+  66   2      
+  67   2                      // overflow zastita
+  68   2                      r_buff.index = (r_buff.index + 1) % BUFF_SIZE;
+  69   2                      
+  70   2                      if(receive == 0x00){
+  71   3                              parse();
+  72   3                              r_buff.buff[r_buff.index] = '\0';
+  73   3                              r_buff.index = 0;
+  74   3                              kraj = 0;               
+  75   3                      }
+  76   2              }
+  77   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    395    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =     36    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
