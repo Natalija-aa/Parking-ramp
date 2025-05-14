@@ -1,10 +1,9 @@
-Ovaj projekat predstavlja jednostavan upravljački sistem parking rampe, koji automatski detektuje vozila i podiže/spušta rampu u skladu sa uslovima detekcije. Sistem je pogodan za implementaciju u pametnim parkiralištima i kontrolisanim ulazima.
+This project represents a simple control system for a parking ramp, which automatically detects vehicles and raises/lowers the barrier based on detection conditions. The system is suitable for implementation in smart parking lots and controlled entry points.
 
-🔧 Tehnologije
-Mikrokontroler 8051,
-C jezik
+🔧 Technologies
+8051 Microcontroller, C language
 
-📦 Funkcionalnosti
-Automatsko otvaranje/zatvaranje rampe,
-Upravljanje putem prekida i tajmera,
-LED indikacija stanja sistema
+📦 Features
+Automatic barrier opening/closing,
+Control using interrupts and timers,
+LED status indication
